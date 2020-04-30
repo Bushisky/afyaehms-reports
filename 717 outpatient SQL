@@ -1,3 +1,4 @@
+#chilren under 5 and over 5 both MAle and Female
 SELECT ageGroup,N_Male,N_FeMale,R_Male,R_FeMale FROM 
 (
 SELECT concept_id,final1.ageGroup,IFNULL(N_Male,0)AS 'N_Male',IFNULL(N_FeMale,0)AS 'N_FeMale',IFNULL(R_Male,0)AS 'R_Male',IFNULL(R_FeMale,0)AS 'R_FeMale' FROM 

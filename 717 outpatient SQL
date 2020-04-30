@@ -1,0 +1,54 @@
+SELECT ageGroup,N_Male,N_FeMale,R_Male,R_FeMale FROM 
+(
+SELECT concept_id,final1.ageGroup,IFNULL(N_Male,0)AS 'N_Male',IFNULL(N_FeMale,0)AS 'N_FeMale',IFNULL(R_Male,0)AS 'R_Male',IFNULL(R_FeMale,0)AS 'R_FeMale' FROM 
+(
+SELECT * FROM
+(
+SELECT concept_id,CASE WHEN concept_id=1 THEN 'Under 1 Year' 
+WHEN concept_id=2 THEN '1 - 4 Years'
+WHEN concept_id=3 THEN '5 - 17 Years' END AS 'ageGroup'
+FROM concept
+)asd
+WHERE ageGroup IS NOT NULL
+)final1
+LEFT JOIN 
+(
+SELECT sag1.ageGroup,
+SUM(IFNULL(sag1.nm,0)) AS 'N_Male',
+SUM(IFNULL(sag1.nf,0)) AS 'N_FeMale',
+SUM(IFNULL(sag1.rm,0)) AS 'R_Male',
+SUM(IFNULL(sag1.rf,0)) AS 'R_FeMale'
+
+FROM 
+(
+SELECT sag.ageGroup,
+CASE WHEN sag.encounter_type=5 AND sag.gender LIKE 'M' THEN sag.total_count END AS 'nm',
+CASE WHEN sag.encounter_type=5 AND sag.gender LIKE 'F' THEN sag.total_count END AS 'nf',
+CASE WHEN sag.encounter_type=6 AND sag.gender LIKE 'M' THEN sag.total_count END AS 'rm',
+CASE WHEN sag.encounter_type=6 AND sag.gender LIKE 'F' THEN sag.total_count END AS 'rf'
+FROM
+(
+	SELECT COUNT(asd1.patient_id) AS total_count,asd1.encounter_type,asd1.gender,asd1.ageGroup
+	FROM
+	(
+	SELECT asd.patient_id,asd.encounter_type,asd.gender,asd.age,
+	CASE WHEN asd.age < 1 THEN 'Under 1 Year' 
+	WHEN asd.age >=1 AND asd.age<5 THEN '1 - 4 Years'
+	WHEN asd.age >=5 AND asd.age<15 THEN '5 - 17 Years'
+	END AS 'ageGroup'
+	FROM
+	(SELECT e.patient_id,e.encounter_type,ps.gender,ps.age
+	FROM `encounter` e
+	INNER JOIN patient_search ps ON ps.patient_id=e.patient_id
+	WHERE encounter_type IN(5,6)
+	AND DATE(e.date_created) BETWEEN ? AND ?
+	)asd
+	)asd1
+	GROUP BY encounter_type,gender,ageGroup
+)sag
+)sag1
+GROUP BY ageGroup
+)final
+ON final1.ageGroup=final.ageGroup
+ORDER BY final1.concept_id
+)
